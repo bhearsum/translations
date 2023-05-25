@@ -506,6 +506,9 @@ rule train_teacher:
                 teacher train {src} {trg} "{params.prefix_train}" "{params.prefix_test}" "{params.dir}" \
                 "{input.vocab}" "{best_model_metric}" {params.args} >> {log} 2>&1'''
 
+rule train_teacher_done:
+    input: expand(f'{teacher_base_dir}{{ens}}/{best_model}', ens = ["0", "1"])
+
 if augment_corpus:
     rule finetune_teacher:
         message: "Finetune teacher on parallel corpus"
