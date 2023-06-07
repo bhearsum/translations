@@ -528,6 +528,9 @@ if augment_corpus:
                     teacher train {src} {trg} "{params.prefix_train}" "{params.prefix_test}" "{params.dir}" \
                     "{input.vocab}" "{best_model_metric}" --pretrained-model "{input.model}" {params.args} >> {log} 2>&1'''
 
+rule finetune_teacher_done:
+    input: expand(f'{teacher_finetuned_dir}{{ens}}/{best_model}', ens = ["0", "1"])
+
 ### translation with teacher
 
 # corpus
