@@ -789,6 +789,9 @@ rule evaluate:
     shell: '''bash pipeline/eval/eval-gpu.sh "{params.res_prefix}" "{params.dataset_prefix}" \
              {params.src_lng} {params.trg_lng} "{params.decoder_config}" {input.models} >> {log} 2>&1'''
 
+rule evaluate_ensemble_done:
+    input: expand(f'{eval_res_dir}/teacher-ensemble/flores_dev.metrics')
+
 rule eval_quantized:
     message: "Evaluating qunatized student model"
     log: f"{log_dir}/eval_quantized_{{dataset}}.log"
