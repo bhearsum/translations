@@ -439,13 +439,13 @@ if do_train_backward:
                     "{input.vocab}" "{best_model_metric}" {params.args} >> {log} 2>&1'''
 
 if augment_corpus:
-    checkpoint split_mono_trg:
+    rule split_mono_trg:
         message: "Splitting monolingual trg dataset"
         log: f"{log_dir}/split_mono_trg.log"
         conda: "envs/base.yml"
         threads: 1
         input: corpora=f"{clean}/mono.{trg}.gz", bin=ancient(deduper)
-        output: directory(f'{translated}/mono_trg')
+        output: f'{translated}/mono_trg.0.split'
         shell: 'bash pipeline/translate/split-mono.sh {input.corpora} {output} {split_length} >> {log} 2>&1'
 
     rule translate_mono_trg:
@@ -455,7 +455,7 @@ if augment_corpus:
         threads: gpus_num * 2
         resources: gpu=gpus_num
         input:
-            bin=ancient(decoder), file=f'{translated}/mono_trg/file.{{part}}',
+            bin=ancient(decoder), file=f'{translated}/mono_trg.0.split',
             vocab=vocab_path, model=f'{backward_dir}/{best_model}'
         output: f'{translated}/mono_trg/file.{{part}}.out'
         params: args = get_args("decoding-backward")
@@ -469,8 +469,7 @@ if augment_corpus:
         threads: 4
         #group 'mono_trg'
         input:
-            lambda wildcards: expand(f"{translated}/mono_trg/file.{{part}}.out",
-                part=find_parts(wildcards, checkpoints.split_mono_trg))
+            lambda wildcards: expand(f"{translated}/mono_trg/file.0.out")
         output: f'{translated}/mono.{src}.gz'
         params: src_mono=f"{clean}/mono.{trg}.gz",dir=directory(f'{translated}/mono_trg')
         shell: 'bash pipeline/translate/collect.sh "{params.dir}" "{output}" "{params.src_mono}" >> {log} 2>&1'
@@ -535,13 +534,13 @@ rule finetune_teacher_done:
 
 # corpus
 
-checkpoint split_corpus:
+rule split_corpus:
     message: "Splitting the corpus to translate"
     log: f"{log_dir}/split_corpus.log"
     conda: "envs/base.yml"
     threads: 1
     input: corpus_src=clean_corpus_src,corpus_trg=clean_corpus_trg
-    output: directory(f"{translated}/corpus")
+    output: f"{translated}/corpus/file.split"
     shell: '''bash pipeline/translate/split-corpus.sh \
                 {input.corpus_src} {input.corpus_trg} {output} {split_length} >> {log} 2>&1'''
 
@@ -553,10 +552,10 @@ rule translate_corpus:
     resources: gpu=gpus_num
     input:
         ancient(decoder),
-        file=f'{translated}/corpus/file.{{part}}',
+        file=f'{translated}/corpus/file.split',
         vocab=vocab_path,
         teacher_models=expand(f"{final_teacher_dir}{{ens}}/{best_model}",ens=ensemble)
-    output: f'{translated}/corpus/file.{{part}}.nbest'
+    output: f'{translated}/corpus/file.{{part}}.nbest', f'{translated}/corpus/file.{{part}}.ref'
     params: args=get_args('decoding-teacher')
     shell: '''bash pipeline/translate/translate-nbest.sh \
                 "{input.file}" "{input.vocab}" {input.teacher_models} {params.args} >> {log} 2>&1'''
@@ -578,21 +577,20 @@ rule collect_corpus:
     threads: 4
     #group 'translate_corpus'
     input:
-        lambda wildcards: expand(f"{translated}/corpus/file.{{part}}.nbest.out",
-            part=find_parts(wildcards, checkpoints.split_corpus))
+        lambda wildcards: expand(f"{translated}/corpus/file.0.nbest.out")
     output: f'{translated}/corpus.{trg}.gz'
     params: src_corpus=clean_corpus_src
     shell: 'bash pipeline/translate/collect.sh {translated}/corpus {output} {params.src_corpus} >> {log} 2>&1'
 
 # mono
 
-checkpoint split_mono_src:
+rule split_mono_src:
     message: "Splitting monolingual src dataset"
     log: f"{log_dir}/split_mono_src.log"
     conda: "envs/base.yml"
     threads: 1
     input: corpora=f"{clean}/mono.{src}.gz", bin=ancient(deduper)
-    output: directory(f'{translated}/mono_src')
+    output: f'{translated}/mono_src/file.0.split'
     shell: 'bash pipeline/translate/split-mono.sh {input.corpora} {output} {split_length} >> {log} 2>&1'
 
 rule translate_mono_src:
@@ -602,7 +600,7 @@ rule translate_mono_src:
     threads: gpus_num*2
     resources: gpu=gpus_num
     input:
-        file=f'{translated}/mono_src/file.{{part}}',vocab=vocab_path,
+        file=f'{translated}/mono_src/file.0.split',vocab=vocab_path,
         teacher_models=expand(f"{final_teacher_dir}{{ens}}/{best_model}",ens=ensemble),
         bin=ancient(decoder)
     output: f'{translated}/mono_src/file.{{part}}.out'
@@ -617,8 +615,7 @@ rule collect_mono_src:
     threads: 4
     #group 'mono_src'
     input:
-       lambda wildcards: expand(f"{translated}/mono_src/file.{{part}}.out",
-           part=find_parts(wildcards, checkpoints.split_mono_src))
+       lambda wildcards: expand(f"{translated}/mono_src/file.0.out")
     output: f'{translated}/mono.{trg}.gz'
     params: src_mono=f"{clean}/mono.{src}.gz",dir=f'{translated}/mono_src'
     shell: 'bash pipeline/translate/collect.sh "{params.dir}" "{output}" "{params.src_mono}" >> {log} 2>&1'
