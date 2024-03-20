@@ -362,7 +362,9 @@ def train_action(parameters, graph_config, input, task_group_id, task_id):
         # as `existing_tasks`. These map task labels (eg: train-backwards-ru-en) to
         # task ids, and will be used instead of scheduling new tasks for any tasks with
         # an identical name.
+        print("Fetching ancestors for tasks: " + start_task_ids)
         parameters["existing_tasks"] = get_ancestors(start_task_ids)
+        print("Finished fetching ancestors for tasks")
 
     parameters["target_tasks_method"] = "train-target-tasks"
     parameters["optimize_target_tasks"] = True
