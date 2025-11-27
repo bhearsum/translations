@@ -10,6 +10,8 @@ def train_target_tasks(full_task_graph, parameters, graph_config):
     datasets = parameters["training_config"]["datasets"]
 
     def filter(task):
+        if task.attributes.get("stage") == "update-db":
+            return True
         # These attributes will be present on tasks from all stages
         if task.attributes.get("stage") != stage:
             return False
