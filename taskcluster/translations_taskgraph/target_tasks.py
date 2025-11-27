@@ -11,8 +11,8 @@ def train_target_tasks(full_task_graph, parameters, graph_config):
 
     def filter(task):
         # These attributes will be present on tasks from all stages
-        if task.attributes.get("stage") != stage:
-            return False
+        if task.attributes.get("stage") == "update-db":
+            return True
 
         if task.attributes.get("src_locale") != src:
             return False

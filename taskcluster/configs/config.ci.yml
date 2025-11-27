@@ -106,7 +106,7 @@ datasets:
 
 # Publishes to the "ci" project.
 wandb-publication: true
-target-stage: all-pipeline
+target-stage: update-db
 taskcluster:
   split-chunks: 2
   upload-bucket: development
